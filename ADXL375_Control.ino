@@ -12,10 +12,10 @@
 // inslude the SPI library:
 #include <SPI.h>
 
-
-// set pin 10 as the slave select for the digital pot:
+// set pin 6 as the slave select for the accelerometer:
 const int slaveSelectPin = 6;
 
+// Declare variables for holding upper and lower bytes of accelerometer readings
 int x_lower = 0;
 int x_upper = 0;
 int y_lower = 0;
@@ -26,60 +26,58 @@ int x_temp = 0;
 int y_temp = 0;
 int z_temp = 0;
 
-int x_neg = 0;
-int y_neg = 0;
-int z_neg = 0;
 
 void setup() {
-  // set the slaveSelectPin as an output:
+  // Set the slaveSelectPin as an output:
   pinMode (slaveSelectPin, OUTPUT);
 
+  // Start the serial interface
   Serial.begin(9600);
 
   
   // initialize SPI:
   SPI.begin();
+  // Set SPI bit rate to 1-Mbps and SPI mode to 3
+  // Page 15 of 32 on ADXL375 datasheet calls for clock polarity
+  // and clock phase both being equal to 1
   SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE3));
 
   Serial.println("Setting DATA_FORMAT register");
-  // take the SS pin low to select the chip:
-  digitalWrite(slaveSelectPin, LOW);
+  
+  digitalWrite(slaveSelectPin, LOW);  // take the SS pin low to select the chip
   //  send in the address and value via SPI:
-  SPI.transfer(0x31);
-  SPI.transfer(0x0F);
-  // take the SS pin high to de-select the chip:
-  digitalWrite(slaveSelectPin, HIGH);
+  SPI.transfer(0x31);   // 0x31 is the DATA_FORMAT register
+  SPI.transfer(0x0F);   // 0x0F sets:
+                        //    D7 - 0 - SELF_TEST - off
+                        //    D6 - 0 - SPI bit - 4-wire mode
+                        //    D5 - 0 - INT_INVERT - active high interrupts
+                        //    D4 - 0
+                        //    D3 - 1
+                        //    D2 - 1 - Justify - left justified MSB mode
+                        //    D1, D0 - 1
+  digitalWrite(slaveSelectPin, HIGH); // take the SS pin high to de-select the chip
 
   Serial.println("Setting the data rate field");
-    // take the SS pin low to select the chip:
   digitalWrite(slaveSelectPin, LOW);
   //  send in the address and value via SPI:
-  SPI.transfer(0x2C);
-  SPI.transfer(0x03);
-  // take the SS pin high to de-select the chip:
+  SPI.transfer(0x2C);   // 0x2C BW_RATE
+  SPI.transfer(0x08);   // Output data rate of 25-Samples/sec, BW of 12.5-Hz
   digitalWrite(slaveSelectPin, HIGH);
 
   digitalWrite(slaveSelectPin, LOW);
   //  send in the address and value via SPI:
-  SPI.transfer(0x2D);
-  SPI.transfer(0x08);
-  // take the SS pin high to de-select the chip:
+  SPI.transfer(0x2D);   // 0x2D POWER_CTL
+  SPI.transfer(0x08);   // 0x08 Places part into measurement mode
   digitalWrite(slaveSelectPin, HIGH);
-/*
-  digitalWrite(slaveSelectPin, LOW);
-  SPI.transfer(0x80);
-  Serial.print(SPI.transfer(0x01), HEX);
-  digitalWrite(slaveSelectPin, HIGH);
-*/
 }
 
 void loop() {
-  x_neg = 0;
-  y_neg = 0;
-  z_neg = 0;
   
   digitalWrite(slaveSelectPin, LOW);
-  SPI.transfer(0xB2);
+  SPI.transfer(0xF2); // Registers 0x32 to 0x37 are data registers
+                      // The upper bits are read (active high) and 
+                      // multi-byte (active high), which transforms
+                      // the 0x32 into 0xF2
   x_lower = SPI.transfer(0x00);
   x_upper = SPI.transfer(0x00);
   y_lower = SPI.transfer(0x00);
@@ -173,7 +171,7 @@ void loop() {
   digitalWrite(slaveSelectPin, HIGH);
   */
   
-  delay(3000);
+  delay(500);
 }
 
 
