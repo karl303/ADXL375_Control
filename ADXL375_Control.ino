@@ -26,6 +26,8 @@ int x_temp = 0;
 int y_temp = 0;
 int z_temp = 0;
 
+int k = 0;
+
 float x_g = 0;
 float y_g = 0;
 float z_g = 0;
@@ -76,29 +78,35 @@ void setup() {
 }
 
 void loop() {
-  
-  digitalWrite(slaveSelectPin, LOW);
-  SPI.transfer(0xF2); // Registers 0x32 to 0x37 are data registers
+  for(k = 0; k < 4; k++)
+  {
+    digitalWrite(slaveSelectPin, LOW);
+    SPI.transfer(0xF2); // Registers 0x32 to 0x37 are data registers
                       // The upper bits are read (active high) and 
                       // multi-byte (active high), which transforms
                       // the 0x32 into 0xF2
-  x_lower = SPI.transfer(0x00);
-  x_upper = SPI.transfer(0x00);
-  y_lower = SPI.transfer(0x00);
-  y_upper = SPI.transfer(0x00);
-  z_lower = SPI.transfer(0x00);
-  z_upper = SPI.transfer(0x00);
-  digitalWrite(slaveSelectPin, HIGH);
+    x_lower = SPI.transfer(0x00);
+    x_upper = SPI.transfer(0x00);
+    y_lower = SPI.transfer(0x00);
+    y_upper = SPI.transfer(0x00);
+    z_lower = SPI.transfer(0x00);
+    z_upper = SPI.transfer(0x00);
+    digitalWrite(slaveSelectPin, HIGH);
 
 
-  // Take the upper byte, left shift by 8 bits and bitwise
-  // OR with the lower byte of the reading.  Then, left shift
-  // by 16 bits so we're using the full 32 bits of the
-  // integer variable
-  x_temp = (x_lower | (x_upper << 8)) << 16;
-  y_temp = (y_lower | (y_upper << 8)) << 16;
-  z_temp = (z_lower | (z_upper << 8)) << 16;
+    // Take the upper byte, left shift by 8 bits and bitwise
+    // OR with the lower byte of the reading.  Then, left shift
+    // by 16 bits so we're using the full 32 bits of the
+    // integer variable
+    x_temp = x_temp + (x_lower | (x_upper << 8)) << 16;
+    y_temp = y_temp + (y_lower | (y_upper << 8)) << 16;
+    z_temp = z_temp + (z_lower | (z_upper << 8)) << 16;
+  }
 
+  x_temp = x_temp >> 2;
+  y_temp = y_temp >> 2;
+  z_temp = z_temp >> 2;
+  
   // Divide by a scale factor
   // 10747904 = 2^16 * 20 * 8
   //    2^16 accounts for the 16-bit left-shift performed above
@@ -109,7 +117,9 @@ void loop() {
   y_g = (float)y_temp / 10747904;
   z_g = (float)z_temp / 10747904;
 
-
+  x_temp = 0;
+  y_temp = 0;
+  z_temp = 0;
 
   Serial.print(x_g);
   Serial.print(",");
@@ -117,7 +127,7 @@ void loop() {
   Serial.print(",");
   Serial.println(z_g);
   
-  delay(500);
+  delay(100);
 }
 
 
