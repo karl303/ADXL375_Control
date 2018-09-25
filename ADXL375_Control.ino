@@ -26,6 +26,10 @@ int x_temp = 0;
 int y_temp = 0;
 int z_temp = 0;
 
+float x_g = 0;
+float y_g = 0;
+float z_g = 0;
+
 
 void setup() {
   // Set the slaveSelectPin as an output:
@@ -86,90 +90,32 @@ void loop() {
   z_upper = SPI.transfer(0x00);
   digitalWrite(slaveSelectPin, HIGH);
 
-/*
-  x_neg = x_upper >> 7;
-  y_neg = y_upper >> 7;
-  z_neg = z_upper >> 7;
-*/
 
+  // Take the upper byte, left shift by 8 bits and bitwise
+  // OR with the lower byte of the reading.  Then, left shift
+  // by 16 bits so we're using the full 32 bits of the
+  // integer variable
   x_temp = (x_lower | (x_upper << 8)) << 16;
   y_temp = (y_lower | (y_upper << 8)) << 16;
   z_temp = (z_lower | (z_upper << 8)) << 16;
 
-  x_temp = x_temp / 1310720;
-  y_temp = y_temp / 1310720;
-  z_temp = z_temp / 1310720;
+  // Divide by a scale factor
+  // 10747904 = 2^16 * 20 * 8
+  //    2^16 accounts for the 16-bit left-shift performed above
+  //    20 is the typical LSB/g acceleration response
+  //    8 accounts for the actual measurement resolution being 13-bit
+  //    rather than the 16-bit presented by the SPI interface
+  x_g = (float)x_temp / 10747904;
+  y_g = (float)y_temp / 10747904;
+  z_g = (float)z_temp / 10747904;
 
-  /*
-  if(x_neg)
-  {
-    x_temp = x_temp & 0x00007FFF;
-    x_temp = x_temp | 0x80000000;
-  }
 
-  if(y_neg)
-  {
-    y_temp = y_temp & 0x00007FFF;
-    y_temp = y_temp | 0x80000000;
-  }
 
-  if(z_neg)
-  {
-    z_temp = z_temp & 0x00007FFF;
-    z_temp = z_temp | 0x80000000;
-  }
-  */
-  
-/*
-  digitalWrite(slaveSelectPin, LOW);
-  SPI.transfer(0xB6);
-  temp_z = SPI.transfer(0x00);
-  digitalWrite(slaveSelectPin, HIGH);
-
-  digitalWrite(slaveSelectPin, LOW);
-  SPI.transfer(0xB7);
-  temp_z = temp_z | (SPI.transfer(0x00) << 8);
-  digitalWrite(slaveSelectPin, HIGH);
-*/
-
-/*
-  Serial.print(x_temp);
+  Serial.print(x_g);
   Serial.print(",");
-  Serial.print(y_temp);
+  Serial.print(y_g);
   Serial.print(",");
-*/
-  Serial.println(z_temp);
-
-  /*
-  digitalWrite(slaveSelectPin, LOW);
-  SPI.transfer(0xB3);
-  Serial.print(SPI.transfer(0x03), HEX);
-  digitalWrite(slaveSelectPin, HIGH);
-
-  Serial.print(',');
-
-  digitalWrite(slaveSelectPin, LOW);
-  SPI.transfer(0xB4);
-  Serial.print(SPI.transfer(0x04), HEX);
-  digitalWrite(slaveSelectPin, HIGH);
-
-  digitalWrite(slaveSelectPin, LOW);
-  SPI.transfer(0xB5);
-  Serial.print(SPI.transfer(0x05), HEX);
-  digitalWrite(slaveSelectPin, HIGH);
-  
-  Serial.print(',');
-
-  digitalWrite(slaveSelectPin, LOW);
-  SPI.transfer(0xB6);
-  Serial.print(SPI.transfer(0x06), HEX);
-  digitalWrite(slaveSelectPin, HIGH);
-
-  digitalWrite(slaveSelectPin, LOW);
-  SPI.transfer(0xB7);
-  Serial.println(SPI.transfer(0x07), HEX);
-  digitalWrite(slaveSelectPin, HIGH);
-  */
+  Serial.println(z_g);
   
   delay(500);
 }
